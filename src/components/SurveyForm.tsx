@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { CheckCircle2, Plus, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   name: z.string().trim().min(2, { message: "പേര് കുറഞ്ഞത് 2 അക്ഷരങ്ങളായിരിക്കണം" }).max(100, { message: "പേര് 100 അക്ഷരങ്ങളിൽ കുറവായിരിക്കണം" }),
@@ -23,6 +25,8 @@ type FormValues = z.infer<typeof formSchema>;
 export function SurveyForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [products, setProducts] = useState<string[]>([""]);
+  const [panchayaths, setPanchayaths] = useState<{ id: string; name: string; name_ml: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -35,6 +39,27 @@ export function SurveyForm() {
       products: [""],
     },
   });
+
+  useEffect(() => {
+    fetchPanchayaths();
+  }, []);
+
+  const fetchPanchayaths = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("panchayaths")
+        .select("id, name, name_ml")
+        .order("name");
+
+      if (error) throw error;
+      setPanchayaths(data || []);
+    } catch (error) {
+      console.error("Error fetching panchayaths:", error);
+      toast.error("പഞ്ചായത്തുകൾ ലോഡ് ചെയ്യുന്നതിൽ പിശക്");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addProductField = () => {
     setProducts([...products, ""]);
@@ -55,17 +80,49 @@ export function SurveyForm() {
     form.setValue("products", newProducts.filter(p => p.trim() !== ""));
   };
 
-  function onSubmit(values: FormValues) {
-    console.log("Survey submitted:", values);
-    setIsSubmitted(true);
-    toast.success("സർവേ വിജയകരമായി സമർപ്പിച്ചു!");
-    form.reset();
-    setProducts([""]);
-    
-    // Reset success state after 5 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-    }, 5000);
+  async function onSubmit(values: FormValues) {
+    try {
+      // Insert survey
+      const { data: survey, error: surveyError } = await supabase
+        .from("surveys")
+        .insert({
+          name: values.name,
+          mobile: values.mobile,
+          panchayath: values.panchayath,
+          ward: values.ward,
+          user_type: values.userType,
+        })
+        .select()
+        .single();
+
+      if (surveyError) throw surveyError;
+
+      // Insert survey items
+      const surveyItems = values.products.map((product) => ({
+        survey_id: survey.id,
+        item_name: product,
+        item_type: values.userType === "customer" ? "product" : "service",
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("survey_items")
+        .insert(surveyItems);
+
+      if (itemsError) throw itemsError;
+
+      setIsSubmitted(true);
+      toast.success("സർവേ വിജയകരമായി സമർപ്പിച്ചു!");
+      form.reset();
+      setProducts([""]);
+
+      // Reset success state after 5 seconds
+      setTimeout(() => {
+        setIsSubmitted(false);
+      }, 5000);
+    } catch (error) {
+      console.error("Error submitting survey:", error);
+      toast.error("സർവേ സമർപ്പിക്കുന്നതിൽ പിശക്");
+    }
   }
 
   if (isSubmitted) {
@@ -127,9 +184,20 @@ export function SurveyForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>പഞ്ചായത്ത്</FormLabel>
-                <FormControl>
-                  <Input placeholder="നിങ്ങളുടെ പഞ്ചായത്ത് നൽകുക" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} value={field.value} disabled={loading}>
+                  <FormControl>
+                    <SelectTrigger className="bg-card border-input">
+                      <SelectValue placeholder={loading ? "ലോഡ് ചെയ്യുന്നു..." : "പഞ്ചായത്ത് തിരഞ്ഞെടുക്കുക"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-popover z-50">
+                    {panchayaths.map((panchayath) => (
+                      <SelectItem key={panchayath.id} value={panchayath.name}>
+                        {panchayath.name_ml || panchayath.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
