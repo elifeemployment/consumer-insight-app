@@ -25,7 +25,8 @@ type FormValues = z.infer<typeof formSchema>;
 export function SurveyForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [products, setProducts] = useState<string[]>([""]);
-  const [panchayaths, setPanchayaths] = useState<{ id: string; name: string; name_ml: string | null }[]>([]);
+  const [panchayaths, setPanchayaths] = useState<{ id: string; name: string; name_ml: string | null; ward_count: number }[]>([]);
+  const [selectedWardCount, setSelectedWardCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const form = useForm<FormValues>({
@@ -48,7 +49,7 @@ export function SurveyForm() {
     try {
       const { data, error } = await supabase
         .from("panchayaths")
-        .select("id, name, name_ml")
+        .select("id, name, name_ml, ward_count")
         .order("name");
 
       if (error) throw error;
@@ -59,6 +60,20 @@ export function SurveyForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePanchayathChange = (value: string) => {
+    const selectedPanchayath = panchayaths.find(p => p.name === value);
+    if (selectedPanchayath) {
+      setSelectedWardCount(selectedPanchayath.ward_count);
+      form.setValue("panchayath", value);
+      form.setValue("ward", ""); // Reset ward when panchayath changes
+    }
+  };
+
+  const generateWardOptions = () => {
+    if (selectedWardCount === 0) return [];
+    return Array.from({ length: selectedWardCount }, (_, i) => (i + 1).toString());
   };
 
   const addProductField = () => {
@@ -184,7 +199,7 @@ export function SurveyForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>പഞ്ചായത്ത്</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={loading}>
+                <Select onValueChange={handlePanchayathChange} value={field.value} disabled={loading}>
                   <FormControl>
                     <SelectTrigger className="bg-card border-input">
                       <SelectValue placeholder={loading ? "ലോഡ് ചെയ്യുന്നു..." : "പഞ്ചായത്ത് തിരഞ്ഞെടുക്കുക"} />
@@ -209,9 +224,20 @@ export function SurveyForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>വാർഡ്</FormLabel>
-                <FormControl>
-                  <Input placeholder="നിങ്ങളുടെ വാർഡ് നൽകുക" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} value={field.value} disabled={selectedWardCount === 0}>
+                  <FormControl>
+                    <SelectTrigger className="bg-card border-input">
+                      <SelectValue placeholder={selectedWardCount === 0 ? "ആദ്യം പഞ്ചായത്ത് തിരഞ്ഞെടുക്കുക" : "വാർഡ് തിരഞ്ഞെടുക്കുക"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-popover z-50">
+                    {generateWardOptions().map((ward) => (
+                      <SelectItem key={ward} value={ward}>
+                        വാർഡ് {ward}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
