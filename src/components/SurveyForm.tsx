@@ -63,7 +63,9 @@ export function SurveyForm() {
   };
 
   const handlePanchayathChange = (value: string) => {
+    console.log("Panchayath changed:", value);
     const selectedPanchayath = panchayaths.find(p => p.name === value);
+    console.log("Selected panchayath:", selectedPanchayath);
     if (selectedPanchayath) {
       setSelectedWardCount(selectedPanchayath.ward_count);
       form.setValue("panchayath", value);
@@ -96,6 +98,8 @@ export function SurveyForm() {
   };
 
   async function onSubmit(values: FormValues) {
+    console.log("Form values on submit:", values);
+    
     try {
       // Insert survey
       const { data: survey, error: surveyError } = await supabase
@@ -109,6 +113,8 @@ export function SurveyForm() {
         })
         .select()
         .single();
+
+      console.log("Survey inserted:", survey);
 
       if (surveyError) throw surveyError;
 
@@ -129,6 +135,7 @@ export function SurveyForm() {
       toast.success("സർവേ വിജയകരമായി സമർപ്പിച്ചു!");
       form.reset();
       setProducts([""]);
+      setSelectedWardCount(0);
 
       // Reset success state after 5 seconds
       setTimeout(() => {

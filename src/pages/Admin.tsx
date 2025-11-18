@@ -78,16 +78,12 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="panchayath" className="space-y-6">
+        <Tabs defaultValue="surveys" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto">
-            <TabsTrigger value="panchayath">Panchayaths</TabsTrigger>
             <TabsTrigger value="surveys">Surveys</TabsTrigger>
             <TabsTrigger value="demanded">Most Demanded</TabsTrigger>
+            <TabsTrigger value="panchayath">Panchayaths</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="panchayath">
-            <PanchayathManagement />
-          </TabsContent>
 
           <TabsContent value="surveys">
             <SurveyDetails />
@@ -95,6 +91,10 @@ const Admin = () => {
 
           <TabsContent value="demanded">
             <MostDemanded />
+          </TabsContent>
+
+          <TabsContent value="panchayath">
+            <PanchayathManagement />
           </TabsContent>
         </Tabs>
       </main>

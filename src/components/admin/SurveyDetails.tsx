@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Trash2, Package, Wrench } from "lucide-react";
+import { Trash2, Package, Wrench, FileText, ShoppingBag } from "lucide-react";
 
 interface Survey {
   id: string;
@@ -27,6 +27,8 @@ const SurveyDetails = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [surveyItems, setSurveyItems] = useState<Record<string, SurveyItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const [totalSurveys, setTotalSurveys] = useState(0);
+  const [uniqueItems, setUniqueItems] = useState(0);
 
   useEffect(() => {
     fetchSurveys();
@@ -41,6 +43,16 @@ const SurveyDetails = () => {
 
       if (surveysError) throw surveysError;
       setSurveys(surveysData || []);
+      setTotalSurveys(surveysData?.length || 0);
+
+      // Fetch all items
+      const { data: allItems } = await supabase
+        .from("survey_items")
+        .select("item_name");
+
+      // Calculate unique items
+      const uniqueItemNames = new Set(allItems?.map(item => item.item_name.toLowerCase()) || []);
+      setUniqueItems(uniqueItemNames.size);
 
       // Fetch items for each survey
       const itemsMap: Record<string, SurveyItem[]> = {};
@@ -82,11 +94,44 @@ const SurveyDetails = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Survey Responses</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Surveys</p>
+                <h3 className="text-3xl font-bold text-foreground">{totalSurveys}</h3>
+              </div>
+              <div className="rounded-full bg-primary/10 p-3">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Unique Products/Services</p>
+                <h3 className="text-3xl font-bold text-foreground">{uniqueItems}</h3>
+              </div>
+              <div className="rounded-full bg-secondary/10 p-3">
+                <ShoppingBag className="h-6 w-6 text-secondary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Survey Responses */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Survey Responses</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="space-y-4">
           {surveys.map((survey) => (
             <Card key={survey.id}>
@@ -137,6 +182,7 @@ const SurveyDetails = () => {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 };
 
