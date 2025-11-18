@@ -1,9 +1,18 @@
 import { SurveyForm } from "@/components/SurveyForm";
 import { ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gradient-background">
+      <div className="absolute top-4 right-4">
+        <Button onClick={() => navigate("/auth")} variant="outline">
+          Admin Login
+        </Button>
+      </div>
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
